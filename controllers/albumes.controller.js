@@ -1,5 +1,4 @@
 const { Album, Imagen, Usuario } = require("../models");
-const path = require("path");
 
 exports.crearAlbumConImagenes = async (req, res) => {
   try {
@@ -10,18 +9,15 @@ exports.crearAlbumConImagenes = async (req, res) => {
       return res.status(400).json({ error: "El título y la visibilidad del álbum son obligatorios." });
     }
 
-    // Validar visibilidad
     const opcionesValidas = ["publica", "privada"];
     if (!opcionesValidas.includes(visibilidad)) {
       return res.status(400).json({ error: "La visibilidad debe ser 'publica' o 'privada'." });
     }
 
-    // Validar cantidad de imágenes
     if (!req.files || req.files.length < 1 || req.files.length > 20) {
       return res.status(400).json({ error: "Debes subir entre 1 y 20 imágenes." });
     }
 
-    // Crear álbum
     const nuevoAlbum = await Album.create({
       usuario_id,
       titulo,
@@ -30,15 +26,14 @@ exports.crearAlbumConImagenes = async (req, res) => {
       fecha_creacion: new Date()
     });
 
-    // Crear imágenes asociadas
     const imagenes = await Promise.all(
       req.files.map(async (file) => {
         return await Imagen.create({
           usuario_id,
           album_id: nuevoAlbum.id_album,
-          ruta_archivo: file.path,
+          ruta_archivo: file.path, // Cloudinary URL
           fecha_subida: new Date(),
-          visibilidad // misma visibilidad que el álbum
+          visibilidad
         });
       })
     );
@@ -75,7 +70,7 @@ exports.obtenerAlbumesDelUsuario = async (req, res) => {
 exports.obtenerAlbumesPublicos = async (req, res) => {
   try {
     const albumes = await Album.findAll({
-      where: { visibilidad: 'publica' }, // <- importante para el feed
+      where: { visibilidad: 'publica' },
       include: [
         {
           model: Imagen,

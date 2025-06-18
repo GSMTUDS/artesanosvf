@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const usuariosController = require('../controllers/usuarios.controller');
 const auth = require('../middlewares/authMiddleware');
-const uploadPerfil = require('../middlewares/uploadImagenPerfil');
-
+const uploadPerfil = require('../middlewares/uploadPerfilCloudinary');
 // Obtener todos los usuarios
 router.get('/', usuariosController.obtenerTodos);
 

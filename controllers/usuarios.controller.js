@@ -172,8 +172,8 @@ exports.perfilPrivado = async (req, res) => {
 exports.actualizarImagenPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
 
-  if (!req.file) {
-    return res.status(400).json({ error: "No se subió ninguna imagen." });
+  if (!req.file || !req.file.path || !req.file.filename) {
+    return res.status(400).json({ error: "No se subió ninguna imagen válida." });
   }
 
   try {
@@ -182,18 +182,24 @@ exports.actualizarImagenPerfil = async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado." });
     }
 
-    if (usuario.imagen_perfil && usuario.imagen_perfil !== "default-avatar.png") {
-      const rutaAnterior = path.join(__dirname, "..", usuario.imagen_perfil);
-      if (fs.existsSync(rutaAnterior)) fs.unlinkSync(rutaAnterior);
+    // Si hay imagen anterior que no es la por defecto, eliminar de Cloudinary
+    if (
+      usuario.imagen_perfil &&
+      !usuario.imagen_perfil.includes("default-avatar.png") &&
+      usuario.imagen_perfil.includes("res.cloudinary.com")
+    ) {
+      const publicId = usuario.imagen_perfil.split('/').slice(-1)[0].split('.')[0];
+      await require('../middlewares/cloudinary').uploader.destroy(`artesanos/perfiles/${publicId}`);
     }
 
+    // Guardar nueva URL en la base
     usuario.imagen_perfil = req.file.path;
     await usuario.save();
 
-    res.json({ mensaje: "Imagen actualizada con éxito", ruta: req.file.path });
+    res.json({ mensaje: "Imagen de perfil actualizada con éxito", ruta: req.file.path });
 
   } catch (error) {
-    console.error("❌ Error al actualizar imagen:", error);
+    console.error("❌ Error al actualizar imagen de perfil con Cloudinary:", error);
     res.status(500).json({ error: "No se pudo actualizar la imagen de perfil." });
   }
 };
