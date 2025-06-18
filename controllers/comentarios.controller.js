@@ -3,11 +3,11 @@ const { Comentario, Usuario } = require('../models');
 // Crear nuevo comentario
 exports.crearComentario = async (req, res) => {
   const usuario_id = req.usuario.id;
-  const { imagen_id, texto } = req.body;
+  const { imagen_id, contenido, texto } = req.body;
 
-  console.log("📝 Intentando comentar", { usuario_id, imagen_id, texto }); // DEBUG
+  const textoFinal = contenido || texto; // acepta ambas variantes
 
-  if (!imagen_id || !texto) {
+  if (!imagen_id || !textoFinal) {
     return res.status(400).json({ error: "Faltan datos" });
   }
 
@@ -15,7 +15,7 @@ exports.crearComentario = async (req, res) => {
     const nuevo = await Comentario.create({
       usuario_id,
       imagen_id,
-      texto
+      contenido: textoFinal
     });
     res.status(201).json({ mensaje: "Comentario creado", comentario: nuevo });
   } catch (error) {
