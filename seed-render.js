@@ -138,4 +138,5 @@ async function insertarDatos() {
   }
 }
 
-insertarDatos();
+
+module.exports = insertarDatos; // ✅ exportar correctamente
