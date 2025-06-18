@@ -80,3 +80,4 @@ db.sequelize.sync().then(() => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
 });
+module.exports = insertarDatos;
