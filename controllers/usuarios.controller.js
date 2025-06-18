@@ -2,7 +2,8 @@ console.log("🧭 Ejecutando archivo usuarios.controller.js");
 
 const { Usuario, Perfil, Album, Imagen, Amistad } = require('../models');
 const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');  // 🔧 IMPORTANTE para búsquedas parciales
+const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 const fs = require("fs");
 const path = require("path");
 
@@ -20,37 +21,7 @@ exports.obtenerTodos = async (req, res) => {
   }
 };
 
-exports.obtenerPerfilPublico = async (req, res) => {
-  const { id } = req.params;
-  const { Album, Imagen } = require('../models');
-
-  try {
-    const usuario = await Usuario.findByPk(id, {
-      attributes: ['id_usuario', 'nombre_usuario', 'imagen_perfil'],
-      include: {
-        model: Perfil,
-        attributes: ['nombre_real', 'intereses', 'biografia']
-      }
-    });
-
-    if (!usuario) return res.status(404).json({ error: "Usuario no encontrado" });
-
-    const albumes = await Album.findAll({
-      where: {
-        usuario_id: id,
-        visibilidad: 'publica'
-      },
-      include: [Imagen]
-    });
-
-    res.json({ usuario, albumes });
-  } catch (error) {
-    console.error("❌ Error al obtener perfil público:", error);
-    res.status(500).json({ error: "Error al obtener perfil público" });
-  }
-};
-
-// Búsqueda por nombre de usuario (usado en feed con buscador)
+// Búsqueda por nombre de usuario
 exports.buscarUsuariosPorNombre = async (req, res) => {
   const { nombre } = req.query;
 
@@ -106,10 +77,12 @@ exports.crear = async (req, res) => {
       return res.status(409).json({ error: "El email ya está registrado." });
     }
 
+    const hash = await bcrypt.hash(contraseña, 10);
+
     const nuevoUsuario = await Usuario.create({
       nombre_usuario,
       email,
-      contraseña_hash: contraseña,
+      contraseña_hash: hash,
       imagen_perfil
     });
 
@@ -131,7 +104,7 @@ exports.crear = async (req, res) => {
   }
 };
 
-// Login con JWT
+// ✅ Login con JWT y comparación de hash
 exports.login = async (req, res) => {
   const { email, contraseña } = req.body;
 
@@ -142,7 +115,12 @@ exports.login = async (req, res) => {
   try {
     const usuario = await Usuario.findOne({ where: { email } });
 
-    if (!usuario || usuario.contraseña_hash !== contraseña) {
+    if (!usuario) {
+      return res.status(401).json({ error: "Credenciales incorrectas." });
+    }
+
+    const passwordValid = await bcrypt.compare(contraseña, usuario.contraseña_hash); // ✅ COMPARACIÓN CORRECTA
+    if (!passwordValid) {
       return res.status(401).json({ error: "Credenciales incorrectas." });
     }
 
@@ -167,6 +145,8 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: "Error interno al intentar iniciar sesión." });
   }
 };
+
+// GET /usuarios/privado
 exports.perfilPrivado = async (req, res) => {
   try {
     const usuario = await Usuario.findByPk(req.usuario.id, {
@@ -202,13 +182,11 @@ exports.actualizarImagenPerfil = async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado." });
     }
 
-    // Eliminar imagen anterior si no es la por defecto
     if (usuario.imagen_perfil && usuario.imagen_perfil !== "default-avatar.png") {
       const rutaAnterior = path.join(__dirname, "..", usuario.imagen_perfil);
       if (fs.existsSync(rutaAnterior)) fs.unlinkSync(rutaAnterior);
     }
 
-    // Actualizar
     usuario.imagen_perfil = req.file.path;
     await usuario.save();
 
@@ -219,50 +197,7 @@ exports.actualizarImagenPerfil = async (req, res) => {
     res.status(500).json({ error: "No se pudo actualizar la imagen de perfil." });
   }
 };
-exports.perfilPublico = async (req, res) => {
-  const id = parseInt(req.params.id);
-  const usuarioActualId = req.usuario.id;
 
-  try {
-    const usuario = await Usuario.findByPk(id, {
-      attributes: ['id_usuario', 'nombre_usuario', 'imagen_perfil'],
-      include: {
-        model: Perfil,
-        attributes: ['nombre_real', 'intereses', 'biografia']
-      }
-    });
-
-    if (!usuario) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
-    }
-
-    // Verificar si son amigos
-    const amistad = await Amistad.findOne({
-      where: {
-        [Op.or]: [
-          { emisor_id: id, receptor_id: usuarioActualId, estado: "aceptada" },
-          { emisor_id: usuarioActualId, receptor_id: id, estado: "aceptada" }
-        ]
-      }
-    });
-
-    const albumes = await Album.findAll({
-      where: {
-        usuario_id: id,
-        visibilidad: amistad ? ["publica", "privada"] : "publica"
-      },
-      include: {
-        model: Imagen,
-        attributes: ['ruta_archivo']
-      }
-    });
-
-    res.json({ usuario, albumes });
-  } catch (error) {
-    console.error("❌ Error al cargar perfil público:", error);
-    res.status(500).json({ error: "Error al obtener perfil público" });
-  }
-};
 // GET /usuarios/perfil-publico/:id
 exports.perfilPublico = async (req, res) => {
   const { id } = req.params;
@@ -275,8 +210,8 @@ exports.perfilPublico = async (req, res) => {
         include: [Imagen],
         where: {
           [Op.or]: [
-            { visibilidad: 'publica' },
-            { visibilidad: 'privada' } // esto se filtra más abajo
+            { visibilidad: 'publico' },
+            { visibilidad: 'privado' }
           ]
         },
         required: false
@@ -287,7 +222,6 @@ exports.perfilPublico = async (req, res) => {
       return res.status(404).json({ error: "Usuario no encontrado." });
     }
 
-    // Determinar si son amigos
     const amistad = await Amistad.findOne({
       where: {
         [Op.or]: [
@@ -299,12 +233,10 @@ exports.perfilPublico = async (req, res) => {
 
     const sonAmigos = Boolean(amistad);
 
-    // Filtrar álbumes si no son amigos
     const albumes = usuario.Albums.filter(album =>
-      album.visibilidad === 'publica' || sonAmigos
+      album.visibilidad === 'publico' || sonAmigos
     );
 
-    // Verificar si ya hay una solicitud pendiente
     const solicitud = await Amistad.findOne({
       where: {
         emisor_id: req.usuario.id,
