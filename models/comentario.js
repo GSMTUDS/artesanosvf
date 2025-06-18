@@ -5,15 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    imagen_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    usuario_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    texto: {
+    contenido: {
       type: DataTypes.TEXT,
       allowNull: false
     },
@@ -22,9 +14,15 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW
     }
   }, {
-    tableName: 'comentarios',
+    tableName: "comentarios",
     timestamps: false
   });
+
+  Comentario.associate = models => {
+    Comentario.belongsTo(models.Usuario, {
+      foreignKey: "usuario_id"
+    });
+  };
 
   return Comentario;
 };
