@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mi Perfil - Artesanos</title>
+  <style>
+    img {
+      max-width: 200px;
+      margin: 5px;
+    }
+    .album {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    .comentarios {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .comentarios p {
+      margin: 3px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bienvenido a tu perfil</h1>
+  <button onclick="logout()">Cerrar sesión</button>
+  <button onclick="window.location.href='feed.html'">Ir al Feed</button>
+
+  <h2>Datos del usuario:</h2>
+  <img id="imagenPerfil" src="/default-avatar.png" alt="Imagen de perfil" width="100"><br>
+  <form id="formImagenPerfil" enctype="multipart/form-data">
+    <label>Cambiar imagen de perfil: <input type="file" name="imagen" accept="image/*" required></label>
+    <button type="submit">Actualizar</button>
+  </form>
+  <pre id="usuarioInfo"></pre>
+  <p id="mensajeImagen"></p>
+
+  <hr>
+
+  <h2>Solicitudes de amistad</h2>
+  <div id="solicitudesContainer">Cargando...</div>
+
+  <hr>
+
+  <button onclick="toggleFormulario()">Crear nuevo álbum</button>
+  <div id="formularioAlbum" style="display: none;">
+    <h3>Crear Álbum</h3>
+    <form id="formAlbum" enctype="multipart/form-data">
+      <input type="text" name="titulo" placeholder="Título del álbum" required><br><br>
+      <textarea name="descripcion" placeholder="Descripción del álbum (opcional)"></textarea><br><br>
+      <label>Visibilidad:
+        <select name="visibilidad">
+          <option value="publica">Pública</option>
+          <option value="privada">Privada</option>
+        </select>
+      </label><br><br>
+      <input type="file" name="imagenes" accept="image/*" multiple required><br><br>
+      <button type="submit">Subir álbum</button>
+    </form>
+    <p id="mensajeAlbum"></p>
+  </div>
+
+  <hr>
+
+  <h2>Tus Álbumes</h2>
+  <div id="albumesContainer"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("⚠️ Debes iniciar sesión.");
+      window.location.href = "login-con-redireccion.html";
+    }
+
+    const socket = io("http://localhost:3000", {
+      auth: { token }
+    });
+
+    socket.on("nueva_solicitud", (data) => {
+      alert(data.mensaje);
+      cargarSolicitudes();
+    });
+
+    function logout() {
+      localStorage.removeItem("token");
+      location.href = "login-con-redireccion.html";
+    }
+
+    function toggleFormulario() {
+      const form = document.getElementById("formularioAlbum");
+      form.style.display = form.style.display === "none" ? "block" : "none";
+    }
+
+    async function cargarPerfil() {
+      try {
+        const res = await fetch("http://localhost:3000/usuarios/privado", {
+          headers: { Authorization: token }
+        });
+        const data = await res.json();
+        document.getElementById("usuarioInfo").textContent = JSON.stringify(data, null, 2);
+
+        const ruta = data.usuario?.imagen_perfil
+          ? "/" + data.usuario.imagen_perfil.replace(/\\/g, "/")
+          : "/default-avatar.png";
+        document.getElementById("imagenPerfil").src = ruta;
+      } catch {
+        document.getElementById("usuarioInfo").textContent = "Error al cargar perfil";
+      }
+    }
+
+    async function cargarSolicitudes() {
+      try {
+        const res = await fetch("http://localhost:3000/amistades/pendientes", {
+          headers: { Authorization: token }
+        });
+        const solicitudes = await res.json();
+        const container = document.getElementById("solicitudesContainer");
+        if (solicitudes.length === 0) return container.textContent = "No tienes solicitudes pendientes.";
+
+        container.innerHTML = "";
+        solicitudes.forEach(sol => {
+          const div = document.createElement("div");
+          div.innerHTML = `
+            <p><strong>${sol.Emisor.nombre_usuario}</strong> te envió una solicitud</p>
+            <button onclick="responderSolicitud(${sol.id_amistad}, 'aceptada')">Aceptar</button>
+            <button onclick="responderSolicitud(${sol.id_amistad}, 'rechazada')">Rechazar</button>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById("solicitudesContainer").textContent = "Error al cargar solicitudes.";
+      }
+    }
+
+    async function responderSolicitud(id, respuesta) {
+      try {
+        const res = await fetch("http://localhost:3000/amistades/responder", {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ solicitud_id: id, respuesta })
+        });
+        if (res.ok) cargarSolicitudes();
+      } catch {
+        alert("Error al responder solicitud");
+      }
+    }
+
+    async function cargarAlbumes() {
+      try {
+        const res = await fetch("http://localhost:3000/albumes/mis-albumes", {
+          headers: { Authorization: token }
+        });
+        const albumes = await res.json();
+        const container = document.getElementById("albumesContainer");
+        container.innerHTML = "";
+
+        for (const album of albumes) {
+          const div = document.createElement("div");
+          div.className = "album";
+          div.innerHTML = `<h3>${album.titulo}</h3><p>${album.descripcion || ""}</p>`;
+
+          for (const img of album.Imagens) {
+            const imgTag = document.createElement("img");
+            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            div.appendChild(imgTag);
+
+            const comentariosDiv = document.createElement("div");
+            comentariosDiv.className = "comentarios";
+            const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+              headers: { Authorization: token }
+            });
+            const comentarios = await resC.json();
+
+            if (comentarios.length) {
+              comentariosDiv.innerHTML = "<strong>Comentarios:</strong><br>";
+              comentarios.forEach(c => {
+                comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.contenido}</p>`;
+              });
+            }
+
+            const form = document.createElement("form");
+            form.onsubmit = async e => {
+              e.preventDefault();
+              const contenido = form.elements.contenido.value.trim();
+              if (!contenido) return;
+
+              const resp = await fetch("http://localhost:3000/comentarios", {
+                method: "POST",
+                headers: {
+                  Authorization: token,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ imagen_id: img.id_imagen, contenido })
+              });
+
+              if (resp.ok) {
+                form.reset();
+                cargarAlbumes();
+              } else {
+                const errorData = await resp.json();
+                alert("❌ Error al comentar: " + (errorData.error || ""));
+              }
+            };
+
+            form.innerHTML = `
+              <input name="contenido" placeholder="Escribe un comentario" required>
+              <button type="submit">Enviar</button>
+            `;
+
+            div.appendChild(comentariosDiv);
+            div.appendChild(form);
+          }
+
+          container.appendChild(div);
+        }
+      } catch (err) {
+        document.getElementById("albumesContainer").textContent = "Error al cargar álbumes";
+      }
+    }
+
+    document.getElementById("formAlbum").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch("http://localhost:3000/albumes", {
+          method: "POST",
+          headers: { Authorization: token },
+          body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("mensajeAlbum").textContent = "✅ Álbum creado con éxito";
+          form.reset();
+          cargarAlbumes();
+        } else {
+          document.getElementById("mensajeAlbum").textContent = "❌ Error: " + data.error;
+        }
+      } catch (err) {
+        document.getElementById("mensajeAlbum").textContent = "❌ Error al conectar";
+      }
+    });
+
+    document.getElementById("formImagenPerfil").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+
+      try {
+        const res = await fetch("http://localhost:3000/usuarios/imagen-perfil", {
+          method: "POST",
+          headers: { Authorization: token },
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("mensajeImagen").textContent = "✅ Imagen actualizada";
+          cargarPerfil();
+        } else {
+          document.getElementById("mensajeImagen").textContent = "❌ Error: " + data.error;
+        }
+      } catch (err) {
+        document.getElementById("mensajeImagen").textContent = "❌ Error de conexión";
+      }
+    });
+
+    cargarPerfil();
+    cargarAlbumes();
+    cargarSolicitudes();
+  </script>
+</body>
+</html>

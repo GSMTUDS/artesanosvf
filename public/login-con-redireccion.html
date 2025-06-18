@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login y Redirección</title>
+</head>
+<body>
+  <h1>Iniciar sesión</h1>
+  <form id="form-login">
+    <label>Email: <input type="email" name="email" required></label><br>
+    <label>Contraseña: <input type="password" name="contraseña" required></label><br>
+    <button type="submit">Ingresar</button>
+  </form>
+
+  <pre id="respuesta"></pre>
+
+  <script>
+    document.getElementById("form-login").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const datos = {
+        email: e.target.email.value,
+        contraseña: e.target.contraseña.value
+      };
+      const res = await fetch("http://localhost:3000/usuarios/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+      });
+
+      const resultado = await res.json();
+
+      if (resultado.token) {
+        localStorage.setItem("token", "Bearer " + resultado.token);
+        window.location.href = "perfil-usuario.html";
+      } else {
+        document.getElementById("respuesta").textContent = JSON.stringify(resultado, null, 2);
+      }
+    });
+  </script>
+</body>
+</html>

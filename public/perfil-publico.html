@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Perfil Público - Artesanos</title>
+  <style>
+    img {
+      max-width: 200px;
+      margin: 5px;
+    }
+    .album {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 20px;
+    }
+    .comentarios {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .comentarios p {
+      margin: 3px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Perfil Público</h1>
+  <button onclick="logout()">Cerrar sesión</button>
+  <button onclick="irAlFeed()">Ir al Feed</button>
+
+  <h2>Datos del usuario:</h2>
+  <img id="imagenPerfil" src="/default-avatar.png" alt="Imagen de perfil" width="100"><br>
+  <pre id="usuarioInfo"></pre>
+  <button id="botonSolicitud" onclick="enviarSolicitud()">Enviar solicitud de amistad</button>
+
+  <hr>
+
+  <h2>Álbumes</h2>
+  <div id="albumesContainer">Cargando...</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const token = localStorage.getItem("token");
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    const socket = io("http://localhost:3000", { auth: { token } });
+
+    if (!token || !id) {
+      alert("⚠️ Debes iniciar sesión o el perfil no es válido.");
+      location.href = "login-con-redireccion.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      location.href = "login-con-redireccion.html";
+    }
+
+    function irAlFeed() {
+      location.href = "feed.html";
+    }
+
+    async function cargarPerfilPublico() {
+      try {
+        const res = await fetch(`http://localhost:3000/usuarios/perfil-publico/${id}`, {
+          headers: { Authorization: token }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error();
+
+        document.getElementById("usuarioInfo").textContent = JSON.stringify(data.usuario, null, 2);
+        document.getElementById("imagenPerfil").src = data.usuario?.imagen_perfil
+          ? "/" + data.usuario.imagen_perfil.replace(/\\/g, "/")
+          : "/default-avatar.png";
+
+        const container = document.getElementById("albumesContainer");
+        container.innerHTML = "";
+
+        if (!data.albumes || data.albumes.length === 0) {
+          container.textContent = "No hay álbumes disponibles.";
+          return;
+        }
+
+        for (const album of data.albumes) {
+          const div = document.createElement("div");
+          div.className = "album";
+          div.innerHTML = `<h3>${album.titulo}</h3><p>${album.descripcion || ""}</p>`;
+
+          for (const img of album.Imagens) {
+            const imgTag = document.createElement("img");
+            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            div.appendChild(imgTag);
+
+            // Comentarios
+            const comentariosDiv = document.createElement("div");
+            comentariosDiv.className = "comentarios";
+            try {
+              const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+                headers: { Authorization: token }
+              });
+              const comentarios = await resC.json();
+              if (comentarios.length) {
+                comentariosDiv.innerHTML = "<strong>Comentarios:</strong><br>";
+                comentarios.forEach(c => {
+                  comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.contenido}</p>`;
+                });
+              }
+            } catch {
+              comentariosDiv.innerHTML = "<p>Error al cargar comentarios</p>";
+            }
+
+            // Formulario de comentario
+            const form = document.createElement("form");
+            form.onsubmit = async e => {
+              e.preventDefault();
+              const contenido = form.elements.contenido.value.trim();
+              if (!contenido) return;
+
+              const resp = await fetch("http://localhost:3000/comentarios", {
+                method: "POST",
+                headers: {
+                  Authorization: token,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ imagen_id: img.id_imagen, contenido })
+              });
+
+              if (resp.ok) {
+                form.reset();
+                cargarPerfilPublico();
+              } else {
+                const errorData = await resp.json();
+                alert("❌ Error al comentar: " + (errorData.error || ""));
+              }
+            };
+
+            form.innerHTML = `
+              <input name="contenido" placeholder="Escribe un comentario" required>
+              <button type="submit">Enviar</button>
+            `;
+
+            div.appendChild(comentariosDiv);
+            div.appendChild(form);
+          }
+
+          container.appendChild(div);
+        }
+
+        const boton = document.getElementById("botonSolicitud");
+        if (data.solicitudEnviada) {
+          boton.disabled = true;
+          boton.textContent = "Solicitud enviada";
+        } else if (data.sonAmigos) {
+          boton.disabled = true;
+          boton.textContent = "Ya son amigos";
+        } else {
+          boton.disabled = false;
+          boton.textContent = "Enviar solicitud de amistad";
+        }
+
+      } catch (error) {
+        console.error("❌ Error al cargar perfil público", error);
+        document.getElementById("albumesContainer").textContent = "❌ Error al cargar perfil público";
+      }
+    }
+
+    async function enviarSolicitud() {
+      try {
+        const res = await fetch("http://localhost:3000/amistades/solicitar", {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ receptor_id: parseInt(id) })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          const boton = document.getElementById("botonSolicitud");
+          boton.disabled = true;
+          boton.textContent = "Solicitud enviada";
+        } else {
+          alert("❌ Error: " + data.error);
+        }
+      } catch (error) {
+        console.error("❌ Error al conectar con el servidor", error);
+        alert("❌ Error al conectar con el servidor");
+      }
+    }
+
+    cargarPerfilPublico();
+  </script>
+</body>
+</html>

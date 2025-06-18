@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Feed - Artesanos</title>
+  <style>
+    .album {
+      border: 1px solid #ccc;
+      margin: 15px;
+      padding: 10px;
+    }
+    img {
+      max-width: 150px;
+      margin: 5px;
+    }
+    .comentarios {
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .comentarios p {
+      margin: 3px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Feed de Álbumes Públicos</h1>
+  <button onclick="logout()">Cerrar sesión</button>
+
+  <h3>Buscar usuarios:</h3>
+  <input type="text" id="buscador" placeholder="Buscar por nombre de usuario...">
+  <ul id="resultadosBusqueda"></ul>
+
+  <hr>
+
+  <div id="feed">Cargando...</div>
+
+  <script>
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("⚠️ Debes iniciar sesión.");
+      window.location.href = "login-con-redireccion.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      location.href = "login-con-redireccion.html";
+    }
+
+    async function cargarFeed() {
+      try {
+        const res = await fetch("http://localhost:3000/albumes/publicos", {
+          headers: { Authorization: token }
+        });
+        const albumes = await res.json();
+
+        const feed = document.getElementById("feed");
+        feed.innerHTML = "";
+
+        for (const album of albumes) {
+          const div = document.createElement("div");
+          div.className = "album";
+
+          div.innerHTML = `
+            <h3>${album.titulo}</h3>
+            <p><strong>Autor:</strong> <a href="perfil-publico.html?id=${album.Usuario.id_usuario}">
+              ${album.Usuario.nombre_usuario}
+            </a></p>
+          `;
+
+          for (const img of album.Imagens) {
+            const imgTag = document.createElement("img");
+            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            div.appendChild(imgTag);
+
+            // Comentarios
+            const comentariosDiv = document.createElement("div");
+            comentariosDiv.className = "comentarios";
+
+            try {
+              const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+                headers: { Authorization: token }
+              });
+              const comentarios = await resC.json();
+
+              if (comentarios.length) {
+                comentariosDiv.innerHTML = "<strong>Comentarios:</strong><br>";
+                comentarios.forEach(c => {
+                  comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.texto}</p>`;
+                });
+              }
+            } catch {
+              comentariosDiv.innerHTML = "<p>Error al cargar comentarios.</p>";
+            }
+
+            // Formulario de comentario
+            const form = document.createElement("form");
+            form.onsubmit = async e => {
+              e.preventDefault();
+              const texto = form.elements.texto.value.trim();
+              if (!texto) return;
+
+              const resp = await fetch("http://localhost:3000/comentarios", {
+                method: "POST",
+                headers: {
+                  Authorization: token,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ imagen_id: img.id_imagen, contenido:texto })
+              });
+
+              if (resp.ok) {
+                form.reset();
+                cargarFeed(); // recargar para mostrar el nuevo comentario
+              } else {
+                alert("❌ Error al comentar");
+              }
+            };
+
+            form.innerHTML = `
+              <input name="texto" placeholder="Escribe un comentario" required>
+              <button type="submit">Enviar</button>
+            `;
+
+            div.appendChild(comentariosDiv);
+            div.appendChild(form);
+          }
+
+          feed.appendChild(div);
+        }
+
+      } catch (error) {
+        console.error("❌ Error al cargar el feed:", error);
+        document.getElementById("feed").textContent = "Error al cargar álbumes.";
+      }
+    }
+
+    async function buscarUsuarios() {
+      const query = document.getElementById("buscador").value.trim();
+      const lista = document.getElementById("resultadosBusqueda");
+      lista.innerHTML = "";
+
+      if (query.length === 0) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/usuarios/buscar?nombre=${query}`, {
+          headers: { Authorization: token }
+        });
+        const usuarios = await res.json();
+
+        usuarios.forEach(u => {
+          const li = document.createElement("li");
+          li.innerHTML = `<a href="perfil-publico.html?id=${u.id_usuario}">${u.nombre_usuario}</a>`;
+          lista.appendChild(li);
+        });
+      } catch (error) {
+        console.error("❌ Error en búsqueda:", error);
+      }
+    }
+
+    document.getElementById("buscador").addEventListener("input", buscarUsuarios);
+
+    cargarFeed();
+  </script>
+</body>
+</html>
