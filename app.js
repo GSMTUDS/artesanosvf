@@ -1,3 +1,22 @@
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Servir archivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Ruta raíz que sirve el frontend
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login-con-redireccion.html'));
+});
+
+// Resto del contenido original
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
