@@ -3,24 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Servir archivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Ruta raíz que sirve el frontend
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login-con-redireccion.html'));
-});
-
-// Resto del contenido original
-
-const http = require("http").createServer(app);
-
 require("dotenv").config();
+const http = require("http").createServer(app);
 const socketio = require("socket.io");
 
 const io = socketio(http, {
@@ -37,11 +21,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static
-app.use(express.static("public"));
+// Archivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Inyectar io a req
+// Ruta raíz
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login-con-redireccion.html'));
+});
+
+// Inyectar io en req
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -51,7 +40,7 @@ app.use((req, res, next) => {
 app.use("/usuarios", require("./routes/usuarios.routes"));
 app.use("/albumes", require("./routes/albumes.routes"));
 app.use("/amistades", require("./routes/amistades.routes"));
-app.use("/comentarios", require("./routes/comentarios.routes")); // ✅ después del middleware de io
+app.use("/comentarios", require("./routes/comentarios.routes"));
 
 // WebSocket con JWT
 io.use((socket, next) => {
@@ -72,6 +61,17 @@ io.on("connection", (socket) => {
   socket.join(`usuario_${socket.usuario_id}`);
 });
 
+// ✅ Ruta temporal para ejecutar el seeder manualmente
+app.get('/run-seed', async (req, res) => {
+  try {
+    await require('./seed-render')();
+    res.send('✅ Datos insertados correctamente');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('❌ Error al insertar datos');
+  }
+});
+
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
 db.sequelize.sync().then(() => {
@@ -80,4 +80,3 @@ db.sequelize.sync().then(() => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
 });
-

@@ -14,6 +14,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   logging: false
 });
 
+// Modelos
 const Usuario = sequelize.define('usuarios', {
   id_usuario: { type: DataTypes.INTEGER, primaryKey: true },
   nombre_usuario: DataTypes.STRING,
@@ -31,6 +32,24 @@ const Perfil = sequelize.define('perfiles', {
   biografia: DataTypes.TEXT
 }, { timestamps: false });
 
+const Album = sequelize.define('albumes', {
+  id_album: { type: DataTypes.INTEGER, primaryKey: true },
+  usuario_id: DataTypes.INTEGER,
+  titulo: DataTypes.STRING,
+  visibilidad: DataTypes.ENUM('publico', 'privado', 'amigos')
+}, { timestamps: false });
+
+const Imagen = sequelize.define('imagenes', {
+  id_imagen: { type: DataTypes.INTEGER, primaryKey: true },
+  album_id: DataTypes.INTEGER,
+  usuario_id: DataTypes.INTEGER,
+  titulo: DataTypes.STRING,
+  url: DataTypes.STRING,
+  modo_vitrina: DataTypes.BOOLEAN,
+  fecha_subida: DataTypes.DATE
+}, { timestamps: false });
+
+// Inserción
 async function insertarDatos() {
   try {
     await sequelize.authenticate();
@@ -72,6 +91,42 @@ async function insertarDatos() {
         nombre_real: 'Sofía Ramos',
         intereses: 'Cerámica, arte textil',
         biografia: 'Artesana textil del sur de Buenos Aires.'
+      }
+    ]);
+
+    await Album.bulkCreate([
+      {
+        id_album: 1,
+        usuario_id: 1,
+        titulo: 'Diseños Modernos',
+        visibilidad: 'publico'
+      },
+      {
+        id_album: 2,
+        usuario_id: 2,
+        titulo: 'Cerámica Artesanal',
+        visibilidad: 'publico'
+      }
+    ]);
+
+    await Imagen.bulkCreate([
+      {
+        id_imagen: 1,
+        album_id: 1,
+        usuario_id: 1,
+        titulo: 'Geometría Urbana',
+        url: 'uploads/imagenes/geometria.jpg',
+        modo_vitrina: true,
+        fecha_subida: new Date()
+      },
+      {
+        id_imagen: 2,
+        album_id: 2,
+        usuario_id: 2,
+        titulo: 'Maceta de barro',
+        url: 'uploads/imagenes/maceta.jpg',
+        modo_vitrina: true,
+        fecha_subida: new Date()
       }
     ]);
 
