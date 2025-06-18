@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // Ruta raíz
 app.get('/', (req, res) => {

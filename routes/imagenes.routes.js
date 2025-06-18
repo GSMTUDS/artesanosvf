@@ -5,15 +5,8 @@ const path = require('path');
 const { Imagen } = require('../models');
 const auth = require('../middlewares/authMiddleware');
 
-// Configuración de multer para subir archivos a /uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads'),
-  filename: (req, file, cb) => {
-    const nombreFinal = Date.now() + '-' + file.originalname;
-    cb(null, nombreFinal);
-  }
-});
-const upload = multer({ storage });
+//const upload = require('../middlewares/uploadCloudinary');
+
 
 // POST /imagenes - subir una imagen
 /* router.post('/', auth, upload.single('imagen'), async (req, res) => {

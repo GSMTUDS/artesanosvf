@@ -71,7 +71,7 @@
 
           for (const img of album.Imagens) {
             const imgTag = document.createElement("img");
-            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            imgTag.src = img.ruta_archivo;
             div.appendChild(imgTag);
 
             const comentariosDiv = document.createElement("div");

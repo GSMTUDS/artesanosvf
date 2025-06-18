@@ -102,9 +102,7 @@
         const data = await res.json();
         document.getElementById("usuarioInfo").textContent = JSON.stringify(data, null, 2);
 
-        const ruta = data.usuario?.imagen_perfil
-          ? "/" + data.usuario.imagen_perfil.replace(/\\/g, "/")
-          : "/default-avatar.png";
+        const ruta = data.usuario?.imagen_perfil || "/default-avatar.png";
         document.getElementById("imagenPerfil").src = ruta;
       } catch {
         document.getElementById("usuarioInfo").textContent = "Error al cargar perfil";
@@ -167,7 +165,7 @@
 
           for (const img of album.Imagens) {
             const imgTag = document.createElement("img");
-            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            imgTag.src = img.ruta_archivo;
             div.appendChild(imgTag);
 
             const comentariosDiv = document.createElement("div");
@@ -196,7 +194,7 @@
                   Authorization: token,
                   "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ imagen_id: img.id_imagen, texto: contenido }) // ✅ CAMBIO AQUÍ
+                body: JSON.stringify({ imagen_id: img.id_imagen, texto: contenido })
               });
 
               if (resp.ok) {

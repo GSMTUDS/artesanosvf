@@ -68,9 +68,7 @@
         if (!res.ok) throw new Error();
 
         document.getElementById("usuarioInfo").textContent = JSON.stringify(data.usuario, null, 2);
-        document.getElementById("imagenPerfil").src = data.usuario?.imagen_perfil
-          ? "/" + data.usuario.imagen_perfil.replace(/\\/g, "/")
-          : "/default-avatar.png";
+        document.getElementById("imagenPerfil").src = data.usuario?.imagen_perfil || "/default-avatar.png";
 
         const container = document.getElementById("albumesContainer");
         container.innerHTML = "";
@@ -87,7 +85,7 @@
 
           for (const img of album.Imagens) {
             const imgTag = document.createElement("img");
-            imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
+            imgTag.src = img.ruta_archivo; // ✅ CLOUDINARY URL directa
             div.appendChild(imgTag);
 
             const comentariosDiv = document.createElement("div");
