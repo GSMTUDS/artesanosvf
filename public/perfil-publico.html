@@ -37,12 +37,13 @@
   <h2>Álbumes</h2>
   <div id="albumesContainer">Cargando...</div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://artesanosvf.onrender.com/socket.io/socket.io.js"></script>
   <script>
+    const baseURL = "https://artesanosvf.onrender.com";
     const token = localStorage.getItem("token");
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id");
-    const socket = io("http://localhost:3000", { auth: { token } });
+    const socket = io(baseURL, { auth: { token } });
 
     if (!token || !id) {
       alert("⚠️ Debes iniciar sesión o el perfil no es válido.");
@@ -60,7 +61,7 @@
 
     async function cargarPerfilPublico() {
       try {
-        const res = await fetch(`http://localhost:3000/usuarios/perfil-publico/${id}`, {
+        const res = await fetch(`${baseURL}/usuarios/perfil-publico/${id}`, {
           headers: { Authorization: token }
         });
         const data = await res.json();
@@ -89,11 +90,10 @@
             imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
             div.appendChild(imgTag);
 
-            // Comentarios
             const comentariosDiv = document.createElement("div");
             comentariosDiv.className = "comentarios";
             try {
-              const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+              const resC = await fetch(`${baseURL}/comentarios/${img.id_imagen}`, {
                 headers: { Authorization: token }
               });
               const comentarios = await resC.json();
@@ -107,14 +107,13 @@
               comentariosDiv.innerHTML = "<p>Error al cargar comentarios</p>";
             }
 
-            // Formulario de comentario
             const form = document.createElement("form");
             form.onsubmit = async e => {
               e.preventDefault();
               const contenido = form.elements.contenido.value.trim();
               if (!contenido) return;
 
-              const resp = await fetch("http://localhost:3000/comentarios", {
+              const resp = await fetch(`${baseURL}/comentarios`, {
                 method: "POST",
                 headers: {
                   Authorization: token,
@@ -164,7 +163,7 @@
 
     async function enviarSolicitud() {
       try {
-        const res = await fetch("http://localhost:3000/amistades/solicitar", {
+        const res = await fetch(`${baseURL}/amistades/solicitar`, {
           method: "POST",
           headers: {
             Authorization: token,
