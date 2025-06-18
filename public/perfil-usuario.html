@@ -180,7 +180,7 @@
             if (comentarios.length) {
               comentariosDiv.innerHTML = "<strong>Comentarios:</strong><br>";
               comentarios.forEach(c => {
-                comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.texto}</p>`;
+                comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.contenido}</p>`;
               });
             }
 
