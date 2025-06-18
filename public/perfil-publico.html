@@ -100,7 +100,7 @@
               if (comentarios.length) {
                 comentariosDiv.innerHTML = "<strong>Comentarios:</strong><br>";
                 comentarios.forEach(c => {
-                  comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.contenido}</p>`;
+                  comentariosDiv.innerHTML += `<p><a href="perfil-publico.html?id=${c.Usuario.id_usuario}">${c.Usuario.nombre_usuario}</a>: ${c.texto}</p>`;
                 });
               }
             } catch {
@@ -119,7 +119,7 @@
                   Authorization: token,
                   "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ imagen_id: img.id_imagen, contenido })
+                body: JSON.stringify({ imagen_id: img.id_imagen, texto: contenido })
               });
 
               if (resp.ok) {
