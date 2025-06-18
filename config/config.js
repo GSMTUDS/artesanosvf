@@ -1,20 +1,32 @@
 require('dotenv').config();
-module.exports = {
-  development: {
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT,
-    dialect: 'mysql'
-  },
-  production: {
-    username: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    database: process.env.MYSQLDATABASE,
-    host: process.env.MYSQLHOST,
-    port: process.env.MYSQLPORT,
-    dialect: 'mysql'
-  }
-};
+const { parse } = require('pg-connection-string');
 
+const config = {};
+
+if (process.env.DATABASE_URL) {
+  const parsed = parse(process.env.DATABASE_URL);
+  config.production = {
+    username: parsed.user,
+    password: parsed.password,
+    database: parsed.database,
+    host: parsed.host,
+    port: parsed.port,
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  };
+} else {
+  config.development = {
+    username: 'root',
+    password: '',
+    database: 'artesanos',
+    host: 'localhost',
+    dialect: 'mysql'
+  };
+}
+
+module.exports = config;
