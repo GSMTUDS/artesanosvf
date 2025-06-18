@@ -67,8 +67,8 @@ app.get('/run-seed', async (req, res) => {
     await require('./seed-render')();
     res.send('✅ Datos insertados correctamente');
   } catch (error) {
-    console.error(error);
-    res.status(500).send('❌ Error al insertar datos');
+    console.error(error); // log en consola de Render
+    res.status(500).send(`<h3>❌ Error al insertar datos:</h3><pre>${error.message}</pre>`);
   }
 });
 
