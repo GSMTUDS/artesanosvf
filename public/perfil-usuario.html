@@ -66,15 +66,16 @@
   <h2>Tus Álbumes</h2>
   <div id="albumesContainer"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://artesanosvf.onrender.com/socket.io/socket.io.js"></script>
   <script>
+    const baseURL = "https://artesanosvf.onrender.com";
     const token = localStorage.getItem("token");
     if (!token) {
       alert("⚠️ Debes iniciar sesión.");
       window.location.href = "login-con-redireccion.html";
     }
 
-    const socket = io("http://localhost:3000", {
+    const socket = io(baseURL, {
       auth: { token }
     });
 
@@ -95,7 +96,7 @@
 
     async function cargarPerfil() {
       try {
-        const res = await fetch("http://localhost:3000/usuarios/privado", {
+        const res = await fetch(`${baseURL}/usuarios/privado`, {
           headers: { Authorization: token }
         });
         const data = await res.json();
@@ -112,7 +113,7 @@
 
     async function cargarSolicitudes() {
       try {
-        const res = await fetch("http://localhost:3000/amistades/pendientes", {
+        const res = await fetch(`${baseURL}/amistades/pendientes`, {
           headers: { Authorization: token }
         });
         const solicitudes = await res.json();
@@ -136,7 +137,7 @@
 
     async function responderSolicitud(id, respuesta) {
       try {
-        const res = await fetch("http://localhost:3000/amistades/responder", {
+        const res = await fetch(`${baseURL}/amistades/responder`, {
           method: "POST",
           headers: {
             Authorization: token,
@@ -152,7 +153,7 @@
 
     async function cargarAlbumes() {
       try {
-        const res = await fetch("http://localhost:3000/albumes/mis-albumes", {
+        const res = await fetch(`${baseURL}/albumes/mis-albumes`, {
           headers: { Authorization: token }
         });
         const albumes = await res.json();
@@ -171,7 +172,7 @@
 
             const comentariosDiv = document.createElement("div");
             comentariosDiv.className = "comentarios";
-            const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+            const resC = await fetch(`${baseURL}/comentarios/${img.id_imagen}`, {
               headers: { Authorization: token }
             });
             const comentarios = await resC.json();
@@ -189,7 +190,7 @@
               const contenido = form.elements.contenido.value.trim();
               if (!contenido) return;
 
-              const resp = await fetch("http://localhost:3000/comentarios", {
+              const resp = await fetch(`${baseURL}/comentarios`, {
                 method: "POST",
                 headers: {
                   Authorization: token,
@@ -229,7 +230,7 @@
       const formData = new FormData(form);
 
       try {
-        const res = await fetch("http://localhost:3000/albumes", {
+        const res = await fetch(`${baseURL}/albumes`, {
           method: "POST",
           headers: { Authorization: token },
           body: formData
@@ -253,7 +254,7 @@
       const formData = new FormData(e.target);
 
       try {
-        const res = await fetch("http://localhost:3000/usuarios/imagen-perfil", {
+        const res = await fetch(`${baseURL}/usuarios/imagen-perfil`, {
           method: "POST",
           headers: { Authorization: token },
           body: formData

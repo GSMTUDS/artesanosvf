@@ -35,6 +35,7 @@
   <div id="feed">Cargando...</div>
 
   <script>
+    const baseURL = "https://artesanosvf.onrender.com";
     const token = localStorage.getItem("token");
 
     if (!token) {
@@ -49,7 +50,7 @@
 
     async function cargarFeed() {
       try {
-        const res = await fetch("http://localhost:3000/albumes/publicos", {
+        const res = await fetch(`${baseURL}/albumes/publicos`, {
           headers: { Authorization: token }
         });
         const albumes = await res.json();
@@ -73,12 +74,11 @@
             imgTag.src = "/" + img.ruta_archivo.replace(/\\/g, "/");
             div.appendChild(imgTag);
 
-            // Comentarios
             const comentariosDiv = document.createElement("div");
             comentariosDiv.className = "comentarios";
 
             try {
-              const resC = await fetch(`http://localhost:3000/comentarios/${img.id_imagen}`, {
+              const resC = await fetch(`${baseURL}/comentarios/${img.id_imagen}`, {
                 headers: { Authorization: token }
               });
               const comentarios = await resC.json();
@@ -93,25 +93,24 @@
               comentariosDiv.innerHTML = "<p>Error al cargar comentarios.</p>";
             }
 
-            // Formulario de comentario
             const form = document.createElement("form");
             form.onsubmit = async e => {
               e.preventDefault();
               const texto = form.elements.texto.value.trim();
               if (!texto) return;
 
-              const resp = await fetch("http://localhost:3000/comentarios", {
+              const resp = await fetch(`${baseURL}/comentarios`, {
                 method: "POST",
                 headers: {
                   Authorization: token,
                   "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ imagen_id: img.id_imagen, contenido:texto })
+                body: JSON.stringify({ imagen_id: img.id_imagen, contenido: texto })
               });
 
               if (resp.ok) {
                 form.reset();
-                cargarFeed(); // recargar para mostrar el nuevo comentario
+                cargarFeed();
               } else {
                 alert("❌ Error al comentar");
               }
@@ -143,7 +142,7 @@
       if (query.length === 0) return;
 
       try {
-        const res = await fetch(`http://localhost:3000/usuarios/buscar?nombre=${query}`, {
+        const res = await fetch(`${baseURL}/usuarios/buscar?nombre=${query}`, {
           headers: { Authorization: token }
         });
         const usuarios = await res.json();
