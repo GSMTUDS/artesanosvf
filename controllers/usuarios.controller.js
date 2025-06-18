@@ -104,7 +104,7 @@ exports.crear = async (req, res) => {
   }
 };
 
-// ✅ Login con JWT y comparación de hash
+// Login con JWT y comparación de hash
 exports.login = async (req, res) => {
   const { email, contraseña } = req.body;
 
@@ -119,7 +119,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "Credenciales incorrectas." });
     }
 
-    const passwordValid = await bcrypt.compare(contraseña, usuario.contraseña_hash); // ✅ COMPARACIÓN CORRECTA
+    const passwordValid = await bcrypt.compare(contraseña, usuario.contraseña_hash);
     if (!passwordValid) {
       return res.status(401).json({ error: "Credenciales incorrectas." });
     }
@@ -146,7 +146,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// GET /usuarios/privado
+// Perfil privado
 exports.perfilPrivado = async (req, res) => {
   try {
     const usuario = await Usuario.findByPk(req.usuario.id, {
@@ -168,7 +168,7 @@ exports.perfilPrivado = async (req, res) => {
   }
 };
 
-// POST /usuarios/imagen-perfil
+// Actualizar imagen de perfil
 exports.actualizarImagenPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
 
@@ -198,7 +198,7 @@ exports.actualizarImagenPerfil = async (req, res) => {
   }
 };
 
-// GET /usuarios/perfil-publico/:id
+// Perfil público
 exports.perfilPublico = async (req, res) => {
   const { id } = req.params;
 
