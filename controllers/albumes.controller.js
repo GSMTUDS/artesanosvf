@@ -5,6 +5,8 @@ exports.crearAlbumConImagenes = async (req, res) => {
     const usuario_id = req.usuario.id;
     const { titulo, descripcion, visibilidad } = req.body;
 
+    console.log("📝 Crear álbum - Datos recibidos:", { titulo, visibilidad });
+
     if (!titulo || !visibilidad) {
       return res.status(400).json({ error: "El título y la visibilidad del álbum son obligatorios." });
     }
@@ -31,12 +33,14 @@ exports.crearAlbumConImagenes = async (req, res) => {
         return await Imagen.create({
           usuario_id,
           album_id: nuevoAlbum.id_album,
-          ruta_archivo: file.path, // Cloudinary URL
+          ruta_archivo: file.path, // URL de Cloudinary
           fecha_subida: new Date(),
           visibilidad
         });
       })
     );
+
+    console.log(`✅ Álbum creado (ID: ${nuevoAlbum.id_album}) con ${imagenes.length} imagen(es)`);
 
     res.status(201).json({
       mensaje: "Álbum creado con éxito",
@@ -46,7 +50,11 @@ exports.crearAlbumConImagenes = async (req, res) => {
 
   } catch (error) {
     console.error("❌ Error al crear álbum:", error);
-    res.status(500).json({ error: "Error al crear el álbum" });
+    res.status(500).json({
+      error: "Error al crear el álbum",
+      detalles: error.message,
+      stack: error.stack
+    });
   }
 };
 
